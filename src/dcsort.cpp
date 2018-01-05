@@ -1,0 +1,586 @@
+#include "dcsort.h"
+#include "ui_dcsort.h"
+#include <QDebug>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QFile>
+
+DCSort::DCSort(QWidget* proditel):QMainWindow(proditel), ui(new Ui::DCSort), m_onastroiki("DC", "Sort"){//
+////////////////////////////////
+//---К О Н С Т Р У К Т О-Р----//
+////////////////////////////////
+	ui->setupUi(this);
+	this->setWindowTitle(tr("Сортировщик"));//Название программы в заголовке окна.
+	this->setWindowIcon(QIcon(":/images/logo.ico"));//Устанавливаем иконку на запущеном приложении.
+	m_pdcmessage = new DCMessage(ui->psbrStrokaSostoyaniya, 30000, this);//Указатель на объект класса сообщени
+	m_pflCopy = new QFile;//Создаём динамический указатель на файл со списком скопированнных файлов.
+	m_ptstCopy = new QTextStream(m_pflCopy);//Добавляем указатель файла в динамический указатель потока.
+	m_pdcvremya = new DCVremya;//Указатель на поток времени.
+	m_ptmRabota = new QTime;//Создаём динамический указатель на таймер работы создания Оглавления.
+
+	connect( 	ui->pcmdLibPut,
+				SIGNAL(clicked()),
+				this,
+				SLOT(slotLibPut()));//Клик кнопки задачи пути к библиотеке.
+
+	connect( 	ui->pcmdSortPut,
+				SIGNAL(clicked()),
+				this,
+				SLOT(slotSortPut()));//Клик кнопки задачи пути где будут сортироваться файлы
+
+	connect( 	ui->pcmdSortFaili,
+				SIGNAL(clicked()),
+				this,
+				SLOT(slotSortFaili()));//Клик кнопки начала сортировки файлов.
+
+	connect( 	ui->pcmdSortProvodnik,
+				SIGNAL(clicked()),
+				this,
+				SLOT(slotSortProvodnik()));//Открыть папку, в кототорой отсортированны файлы.
+
+	connect( 	ui->pcmdSortOtmena,
+				SIGNAL(clicked()),
+				this,
+				SLOT(slotSortOtmena()));//Кнопка Отмены процесса сортировки. 
+
+	connect( 	ui->pcmdSortVihod,
+				SIGNAL(clicked()),
+				this,
+				SLOT(slotSortVihod()));//Клик кнопки Выход.
+
+	connect( 	m_pdcvremya,
+				SIGNAL(signalTimer()),
+				this,
+				SLOT(slotSortRabota()));//Время работы сортировщика.
+
+	m_pdcvremya->start();//Запуск потока с таймером.
+	m_strSortPut = "";//Путь сортировки файлов по умолчанию.
+	m_blRekursiya = true;//Функция в работе.
+	m_ntSchet = 0;//количество копируемых файлов.
+	m_ntTab = 0;//Иннициализируем 0 счётчик табов.
+	m_ntKolichestvo = 0;//Иннициализируем 0 количество отсортированных файлов.
+	m_ntSec = 0;//Обнуляем.
+	m_ntCopy = 0;//Обнуляем.
+	//---расширения типов файлов---//
+	m_strIzob = " *.png *.jpg *.jpeg";
+	m_strVideo = " *.avi *.mp4 *.mov *.mkv *.mpg *.mpeg";
+	m_strMuzika = " *.mp3 *.m4a *.wav *.ogg";
+	m_strDoc = " *.pdf *.doc *.docx *.txt";
+	//---устанавливаем описания расширений---//
+	ui->pcbxIzob->setToolTip(m_strIzob);//на флажке изображения появляется описание расширений файлов.
+	ui->pcbxVideo->setToolTip(m_strVideo);//на флажке видео появляется описание расширений файлов.
+	ui->pcbxMuzika->setToolTip(m_strMuzika);//на флажке музыки появляется описание расширений файлов.
+	ui->pcbxDoc->setToolTip(m_strDoc);//на флажке документов появляется описание расширений файлов.
+	//---задаём имя файлов---//
+	ui->pgbxFile->setCheckable(true);//Делаем groupbox выбираемым с помощью галочки
+	ui->pgbxFile->setChecked(false);//Убираем галочку с groupbox.
+	ui->pgbxFile->setToolTip(tr("Если не выбирать данный флажок, то имена файлов останутся без изменений"));
+
+	QStringList lstFailData = (QStringList()<<tr("пусто")<<tr("год")<<tr("месяц")<<tr("день")<<tr("-")
+			<<tr("имя файла")<<tr("время")<<tr("секунды"));
+	ui->pcbxFail_1->clear();
+	ui->pcbxFail_1->addItems(lstFailData);
+	ui->pcbxFail_2->clear();
+	ui->pcbxFail_2->addItems(lstFailData);
+	ui->pcbxFail_3->clear();
+	ui->pcbxFail_3->addItems(lstFailData);
+	ui->pcbxFail_4->clear();
+	ui->pcbxFail_4->addItems(lstFailData);
+	ui->pcbxFail_5->clear();
+	ui->pcbxFail_5->addItems(lstFailData);
+	ui->pcbxFail_6->clear();
+	ui->pcbxFail_6->addItems(lstFailData);
+
+	QStringList lstFailImya = (QStringList()<<tr("имя файла")<<tr("время создания файла"));
+	ui->pcbxFail_7->clear();
+	ui->pcbxFail_7->addItems(lstFailImya);
+	
+	polNastroiki();//Чтение настроек программы
+}
+
+DCSort::~DCSort(){//Деструктор
+//////////////////////////////
+//---Д Е С Т Р У К Т О-Р----//
+//////////////////////////////
+	ustNastroiki();//При закрытии программы записываем настройки программы
+	delete m_pdcmessage;//Обязательно удаляем указатель объекта методов сообщений.
+	m_pdcmessage = 0;
+	delete m_pflCopy;//Обязательно удаляем указатель объекта методов файла со списком скопированных файлов.
+	m_pflCopy= 0;
+	delete m_ptstCopy;
+	m_ptstCopy = 0;
+	m_pdcvremya->terminate();//Удаляем поток.
+	delete m_pdcvremya;//Удаляем указатель на поток.
+	m_pdcvremya = 0;//Обнуляем указатель на поток.
+	delete m_ptmRabota;
+	m_ptmRabota = 0;
+	delete ui;
+}
+
+void DCSort::ustNastroiki(){//Запись настроек программы
+///////////////////////////////////////
+//---З А П И С Ь   Н А С Т Р О Е К---//
+///////////////////////////////////////
+	m_onastroiki.beginGroup("/Nastroiki");//Открываем группу /Настройки
+		m_onastroiki.setValue("/sort_shirina_okna", width());//Записываем ширину окна
+		m_onastroiki.setValue("/sort_visota_okna", height());//Записываем высоту окна
+		m_onastroiki.setValue("/sort_put_lib", ui->pldtLibPut->text());//Записываем
+		m_onastroiki.setValue("/sort_put_sort", ui->pldtSortPut->text());//Записываем
+		m_onastroiki.setValue("/sort_maska", polNastroikuMaski());//Записываем
+	m_onastroiki.endGroup();//Закрываем группу /Настройки
+}
+
+void DCSort::polNastroiki(){//Чтение настроек программы
+///////////////////////////////////////
+//---Ч Т Е Н И Е   Н А С Т Р О Е К---//
+///////////////////////////////////////
+	m_onastroiki.beginGroup("/Nastroiki");//Открываем группу /Настройки
+		int ntShirinaOkna = m_onastroiki.value("/sort_shirina_okna", width()).toInt();//Читаем ширину окна
+		int ntVisotaOkna = m_onastroiki.value("/sort_visota_okna", height()).toInt();//Читаем высоту окна
+		QString strLibPut = m_onastroiki.value("/sort_put_lib", "").toString();//Читаем путь к библиотеке. 
+		QString strSortPut = m_onastroiki.value("/sort_put_sort", "").toString();//Читаем путь к сортировке. 
+		QString strSortFaili = m_onastroiki.value("/sort_maska", "1,0,0,0").toString();//Читаем маску.
+	m_onastroiki.endGroup();//Закрываем группу /Настройки
+
+	resize(ntShirinaOkna, ntVisotaOkna);//Выставляем размеры окна
+	ui->pldtLibPut->setText(strLibPut);//Вставляем путь к библиотеке из реестра
+	ui->pldtSortPut->setText(strSortPut);//Вставляем путь к месту сортировки 
+	ustNastroikuMaski(strSortFaili);//Вставляем маску в строку.
+}
+
+QString DCSort::polNastroikuMaski(){//Возвращает настройку маски.
+/////////////////////////////////////////////////////////
+//---П О Л У Ч И Т Ь   Н А С Т Р О Й К И   М А С К И---//
+/////////////////////////////////////////////////////////
+	QString strNastroikaMaski("");
+	if(ui->pcbxIzob->isChecked())
+		strNastroikaMaski += "1,";
+	else
+		strNastroikaMaski += "0,";
+
+	if(ui->pcbxVideo->isChecked())
+		strNastroikaMaski += "1,";
+	else
+		strNastroikaMaski += "0,";
+
+	if(ui->pcbxMuzika->isChecked())
+		strNastroikaMaski += "1,";
+	else
+		strNastroikaMaski += "0,";
+
+	if(ui->pcbxDoc->isChecked())
+		strNastroikaMaski += "1";
+	else
+		strNastroikaMaski += "0";
+
+	return strNastroikaMaski;
+}
+
+void DCSort::ustNastroikuMaski(QString strNastroikaMaski){//Устанавливает настроики маски.
+/////////////////////////////////////////////////////////////
+//---У С Т А Н О В И Т Ь   Н А С Т Р О Й К И   М А С К И---//
+/////////////////////////////////////////////////////////////
+	QStringList slsNastroikaMaski = strNastroikaMaski.split(",");//Разделяем строку на цифры через запятую
+	if(slsNastroikaMaski.size() != 4)//Если в настройне не 4 элемента, то..
+		return;//Ошибка, выход.
+
+	if(slsNastroikaMaski[0] == "1")
+		ui->pcbxIzob->setChecked(true);
+	else
+		ui->pcbxIzob->setChecked(false);
+
+	if(slsNastroikaMaski[1] == "1")
+		ui->pcbxVideo->setChecked(true);
+	else
+		ui->pcbxVideo->setChecked(false);
+
+	if(slsNastroikaMaski[2] == "1")
+		ui->pcbxMuzika->setChecked(true);
+	else
+		ui->pcbxMuzika->setChecked(false);
+
+	if(slsNastroikaMaski[3] == "1")
+		ui->pcbxDoc->setChecked(true);
+	else
+		ui->pcbxDoc->setChecked(false);
+}
+
+void DCSort::startSchet(const QDir& dir){//Рекурсивный метод подсчёта копируемых файлов.
+///////////////////////////////////////////
+//---Р Е К У Р С И В Н Ы Й   П О И С К---//
+///////////////////////////////////////////
+	QApplication::processEvents();//Вызов этого метода нужен, чтобы программа не зависала при вызове рекурсии.
+
+	if(m_blRekursiya){//Если добро на работу, то...
+		m_ntSchet = m_ntSchet + dir.entryList(polMasku().split(" "), QDir::Files).size();//Счёт
+		QStringList listDir = dir.entryList(QDir::Dirs);
+		foreach (QString subdir, listDir) { 
+			if (subdir == "." || subdir == "..") { 
+				continue; 
+			} 
+			startSchet(QDir(dir.absoluteFilePath(subdir))); 
+		}
+	}
+	else{//Если отмена работы рекурсии, то...
+		return;//Выходим из рекурсивного метода.
+	}
+}
+
+void DCSort::startSort(const QDir& dir){//Рекурсивный метод поиска файлов
+///////////////////////////////////////////
+//---Р Е К У Р С И В Н Ы Й   П О И С К---//
+///////////////////////////////////////////
+	QApplication::processEvents();//Вызов этого метода нужен, чтобы программа не зависала при вызове рекурсии.
+
+	if(m_blRekursiya){//Если добро на работу, то...
+		QString strTab("");//Строка содержащая отступы
+		for (int ntTab = 0; ntTab < m_ntTab; ntTab++)//Цикл отступов папок.
+			strTab = strTab + "\t";//Добавляем отступ
+
+		ui->ptdtSort->append(strTab + "|" + dir.dirName() + "|");//Отображаем папки
+		QStringList slsPut = dir.entryList(polMasku().split(" "), QDir::Files);//Маска
+	 
+		m_ntTab++;//
+		strTab = strTab + "\t";//Отступ дабавляем для файлов.
+		foreach (QString strFile, slsPut){//Цикл показа файлов с рекурсивной функцией.
+			if(!m_blRekursiya)//Если произошла отмена работы сортировки, то...
+				return;//Выходим из рекурсии
+			QFile flSort (dir.absoluteFilePath(strFile));//Сортируемый файл.
+			QFileInfo fnfSort(dir.absoluteFilePath(strFile));//Информация по сортируемому файлу.
+			QString strGod = fnfSort.created().date().toString("yyyy");//Год создания файла.
+			QString strSortData = fnfSort.created().date().toString("yyyy-MM-dd");//папки с датами.
+			QDir drSort(m_strSortPut);//Каталог сортировки файлов.
+			QDir drSortGod(m_strSortPut+QDir::separator()+strGod);//Каталог Года сортировки
+			QDir drSortData(drSortGod.absolutePath() + QDir::separator()+ strSortData);//Папка с именем Даты
+
+			bool blSortGod = true;//Ошибка создания папки Год.
+			bool blSortData = true;//Ошибка создания папки Дата.
+			if(!flSort.isOpen()){//Если файл не открыт, то...
+				if(!drSortGod.exists()){//Если нет папки Год, то...
+					if(!drSort.mkdir(strGod)){//Если не создался каталог года, то...
+						QMessageBox msgBox(this);//Создаем объект Сообщения
+						msgBox.setWindowTitle(tr("Ошибка:"));//Устанавливаем заголовок окна сообщения.
+						msgBox.setIcon(QMessageBox::Question);
+						msgBox.setText(tr("Пропустить создание папки: ")+strGod+"?");//Добав. текст
+						msgBox.setInformativeText(tr("Пропустить?"));//Добавляем вопрос в сообщение
+						//Создаем кнопку Ок, и добавляем ее в сообщение
+						QPushButton* pcmdOk = msgBox.addButton(QMessageBox::Ok);
+						//Создаем кнопку Отмена и добавляем ее в сообщение
+						QPushButton* pcmdChancel = msgBox.addButton(tr("Отмена"), QMessageBox::ActionRole);
+						msgBox.setDefaultButton(QMessageBox::Ok);//Делаем по умолчанию выделенную кнопку Ок
+						msgBox.exec();//Запускаем Сообщение
+						if(msgBox.clickedButton() == pcmdChancel){//Если нажата кнопка Отмена, то...
+							blSortGod = false;//Ошибка создания папки Год.	
+							m_blRekursiya = false;//Выход из поиска файлов.
+						}
+						if (msgBox.clickedButton() == pcmdOk){//Если нажата кнопка Ок, то...
+							blSortGod = false;//Ошибка создания папки Год.	
+						}
+					}
+				}
+				if(blSortGod){//Если не было ошибок по созданию папки Год, то...
+					if(!drSortData.exists()){//Если папки Дата не существует, то...
+						if(!drSortGod.mkdir(strSortData)){//Если папка Дата не создалась, то...
+							QMessageBox msgBox(this);//Создаем объект Сообщения
+							msgBox.setWindowTitle(tr("Ошибка:"));//Устанавливаем заголовок окна сообщения.
+							msgBox.setIcon(QMessageBox::Question);
+							msgBox.setText(tr("Пропустить создание папки: ")+strSortData+"?");//Добав. текст
+							msgBox.setInformativeText(tr("Пропустить?"));//Добавляем вопрос в сообщение
+							//Создаем кнопку Ок, и добавляем ее в сообщение
+							QPushButton* pcmdOk = msgBox.addButton(QMessageBox::Ok);
+							//Создаем кнопку Отмена и добавляем ее в сообщение
+							QPushButton* pcmdChancel = msgBox.addButton(tr("Отмена"),QMessageBox::ActionRole);
+							msgBox.setDefaultButton(QMessageBox::Ok);//Делаем по умолчанию выделенную кнопк Ок
+							msgBox.exec();//Запускаем Сообщение
+							if(msgBox.clickedButton() == pcmdChancel){//Если нажата кнопка Отмена, то...
+								blSortData = false;//Ошибка создания папки Даты.
+								m_blRekursiya = false;//Выход из поиска файлов.
+							}
+							if (msgBox.clickedButton() == pcmdOk){//Если нажата кнопка Ок, то...
+								blSortData = false;//Ошибка создания папки Даты.
+							}
+						}	
+					}
+				}
+
+				if(blSortData){//Если нет ошибок при создании папки Дата, то...
+					int ntSec =	fnfSort.created().time().hour()*360
+							+fnfSort.created().time().minute()*60
+							+fnfSort.created().time().second();//Считаем колличество секунд во времени создан.
+					if(ntSec != m_ntSec)//Если эти переменные не равны, то это файл с неодинаковым временем.
+						m_ntCopy = 0;//Обнуляем счётчик одинаковых файлов по времени.
+					m_ntSec = ntSec;//Приравниваем параметры.
+					QFile flCopy(drSortData.absolutePath()+QDir::separator()+QString::number(ntSec)+"."
+							+fnfSort.suffix());//Файл с новым именем по секундам в месте его копирования.
+					for(int ntShag = 0; ntShag<100; ++ntShag){//Цикл из 100 одинаковых файлов.
+						if(flCopy.exists()){//Если файл с таким именем существует, то...
+							QString strCopyCopy = "("+QString::number(++m_ntCopy)+")";//Создаём файл со ()
+							QFile flCopyCopy(drSortData.absolutePath()+QDir::separator()
+									+QString::number(ntSec)+strCopyCopy+"."+fnfSort.suffix());//Файл со ()
+							if(!flCopyCopy.exists())//Если файла со скобками и цифрой не существует, то...
+								break;//Выход из перечисления.
+						}
+						else{//Если файла с таким имененем не существует, то...
+							m_ntCopy = 0;//Обнуляем счётчик файлов с одинаковым именем.
+							break;//Выход из перечисления.
+						}
+					}
+					QString strCopy("");//Строка со ()
+					if(m_ntCopy)//Если счётчик не 0, то...
+						strCopy = "("+QString::number(m_ntCopy)+")";//Добавляем номер в скобки одинакого файла
+
+					if(flSort.copy(dir.absoluteFilePath(strFile), drSortData.absolutePath()+QDir::separator()
+							+QString::number(ntSec)+strCopy+"."+fnfSort.suffix())){//Если файл скопировался,то
+						*m_ptstCopy<< dir.absoluteFilePath(strFile) + "\r\n";//Добавляем в поток
+						ui->plblSortKolichestvoFailov->setText(QString::number(++m_ntKolichestvo));//+1 записи
+						ui->ppbrSort->setValue(m_ntKolichestvo);//Отобразить на панели прогресса.
+						ui->ptdtSort->append(strTab + dir.relativeFilePath(strFile));//Отображаем файлы
+					}
+					else{
+						QMessageBox msgBox(this);//Создаем объект Сообщения
+						msgBox.setWindowTitle(tr("Ошибка:"));//Устанавливаем заголовок окна сообщения.
+						msgBox.setIcon(QMessageBox::Question);
+						msgBox.setText(tr("Пропустить копирование файла: ")+fnfSort.absoluteFilePath()+"?");//
+						msgBox.setInformativeText(tr("Пропустить?"));//Добавляем вопрос в сообщение
+						//Создаем кнопку Ок, и добавляем ее в сообщение
+						QPushButton* pcmdOk = msgBox.addButton(QMessageBox::Ok);
+						//Создаем кнопку Отмена и добавляем ее в сообщение
+						QPushButton* pcmdChancel = msgBox.addButton(tr("Отмена"),QMessageBox::ActionRole);
+						msgBox.setDefaultButton(QMessageBox::Ok);//Делаем по умолчанию выделенную кнопк Ок
+						msgBox.exec();//Запускаем Сообщение
+						if(msgBox.clickedButton() == pcmdChancel){//Если нажата кнопка Отмена, то...
+							m_blRekursiya = false;//Выход из поиска файлов.
+						}
+						if (msgBox.clickedButton() == pcmdOk){//Если нажата кнопка Ок, то...
+						}
+					}
+				}
+			}
+			else{//В противном случае...
+				QMessageBox msgBox(this);//Создаем объект Сообщения
+				msgBox.setWindowTitle(tr("Ошибка:"));//Устанавливаем заголовок окна сообщения.
+				msgBox.setIcon(QMessageBox::Question);
+				msgBox.setText(tr("Пропустить копирование файла: ")+fnfSort.absoluteFilePath()+"?");//Добав. 
+				msgBox.setInformativeText(tr("Пропустить?"));//Добавляем вопрос в сообщение
+				//Создаем кнопку Ок, и добавляем ее в сообщение
+				QPushButton* pcmdOk = msgBox.addButton(QMessageBox::Ok);
+				//Создаем кнопку Отмена и добавляем ее в сообщение
+				QPushButton* pcmdChancel = msgBox.addButton(tr("Отмена"), QMessageBox::ActionRole);
+				msgBox.setDefaultButton(QMessageBox::Ok);//Делаем по умолчанию выделенную кнопку Ок
+				msgBox.exec();//Запускаем Сообщение
+				if(msgBox.clickedButton() == pcmdChancel){//Если нажата кнопка Отмена, то...
+					m_blRekursiya = false;//Выход из поиска файлов.
+				}
+				if (msgBox.clickedButton() == pcmdOk){//Если нажата кнопка Ок, то...
+				}
+			}
+		} 
+ 
+		QStringList listDir = dir.entryList(QDir::Dirs);
+		foreach (QString subdir, listDir) { 
+			if (subdir == "." || subdir == "..") { 
+				continue; 
+			} 
+			startSort(QDir(dir.absoluteFilePath(subdir))); 
+		}
+		m_ntTab--;//отнимаем отступ.
+	}
+	else{//Если отмена работы рекурсии, то...
+		return;//Выходим из рекурсивного метода.
+	}
+}
+
+void DCSort::cvetSort(){//Цвет граф по умолчанию.
+/////////////////////////////////////////////
+//---Ц В Е Т А   П О   У М О Л Ч А Н И Ю---//
+/////////////////////////////////////////////
+	ui->plblLibPut->setStyleSheet("color: rgb(0, 0, 0)");
+	ui->plblSortPut->setStyleSheet("color: rgb(0, 0, 0)");
+	ui->plblSortFaili->setStyleSheet("color: rgb(0, 0, 0)");
+}
+
+QString DCSort::polMasku(){//Возвращает маску файлов, которые нужно отсортировать.
+///////////////////////////////////////////////////////////
+//---П О Л У Ч И Т Ь   М А С К У   С О Р Т И Р О В К И---//
+///////////////////////////////////////////////////////////
+	QString strMaska("");
+	if(ui->pcbxIzob->isChecked())
+		strMaska += m_strIzob;
+	
+	if(ui->pcbxVideo->isChecked())
+		strMaska += m_strVideo;
+	
+	if(ui->pcbxMuzika->isChecked())
+		strMaska += m_strMuzika;
+	
+	if(ui->pcbxDoc->isChecked())
+		strMaska += m_strDoc;
+
+	return strMaska;
+}
+
+void DCSort::slotLibPut(){//Слот задачи пути к библиотеке
+/////////////////////////////////////////////////////
+//---С Л О Т   П У Т И   К   Б И Б Л И О Т Е К Е---//
+/////////////////////////////////////////////////////
+	QString strLibPut = QFileDialog::getExistingDirectory(0, "Путь директории файлов.", "");
+	if(!strLibPut.isEmpty()){//Если строчка не пустая или не нажата кнопка отмена, то...
+		ui->pldtLibPut->clear();//Очищаем строчку от старого пути.
+		ui->pldtLibPut->setText(strLibPut);//Вставляем выбранный путь к библиотеке.
+	}
+}
+
+void DCSort::slotSortPut(){//Слот задачи пути где будут сортироваться файлы.
+/////////////////////////////////////////////////////////////
+//---С Л О Т   П У Т И   М Е С Т А   С О Р Т И Р О В К И---//
+/////////////////////////////////////////////////////////////
+	QString strSortPut = QFileDialog::getExistingDirectory(0, "Путь директории сортировки.", "");
+	if(!strSortPut.isEmpty()){
+		ui->pldtSortPut->clear();//Очищаем строчку от старого пути.
+		ui->pldtSortPut->setText(strSortPut);//Вставляем выбранный путь сортировки файлов.
+	}
+}
+
+void DCSort::slotSortFaili(){//Слот начала сортировки файлов.
+/////////////////////////////////////////////////////
+//---С Л О Т   Н А Ч А Л А   С О Р Т И Р О В К И---//
+/////////////////////////////////////////////////////
+	cvetSort();//Цвет граф по умолчанию.
+
+	QString strLibPut = ui->pldtLibPut->text();//Путь к библиотеке.
+	QString strSortPut = ui->pldtSortPut->text();//Путь к месту сортировки.
+
+	if(polMasku().isEmpty()){//Если Маска пустая, то...
+		m_pdcmessage->critical(ui->plblSortFaili,
+			tr("Пустое поле: ") + ui->plblSortFaili->text() + tr(", выберите элементы сортировки!"));
+		return;//Выход из слота
+	}
+	else{
+		QDir drLibPut(strLibPut);//Папка сортируемых файлов
+		if(!drLibPut.exists()){//Если данная папка не существует, то...
+			m_pdcmessage->critical(ui->plblLibPut,
+				tr("Данной папки не существует: ") + ui->plblLibPut->text()
+				+ tr(" , укажите существующую папку!"));
+			return;//Выход из слота
+		}
+		else{
+			if(strLibPut.isEmpty()){//Если путь к библиотеке пуст, то...
+				m_pdcmessage->critical(ui->plblLibPut,
+						tr("Пустое поле: ") + ui->plblLibPut->text() + tr(", заполните его!"));
+				return;//Выход из слота
+			}
+			else{
+				QDir drSortPut(strSortPut);//Папка места сортировки файлов
+				if(!drSortPut.exists()){//Если данная папка не существует, то...
+					m_pdcmessage->critical(ui->plblSortPut,
+						tr("Данной папки не существует: ") + ui->plblSortPut->text()
+						+ tr(" , укажите существующую папку!"));
+					return;//Выход из слота
+				}
+				else{
+					if(strSortPut.isEmpty()){//Если путь места сортировки пуст, то...
+						m_pdcmessage->critical(ui->plblSortPut,
+								tr("Пустое поле: ") + ui->plblSortPut->text() + tr(", заполните его!"));
+						return;//Выход из слота
+					}
+				}
+			}
+		}
+	}
+
+	int ntLibPut = strLibPut.size();//Длина пути библиотеки
+	int ntSortPut = strSortPut.size();//Длина пути места сортировки.
+	bool blSortPut = true;//Пути взаимовложенные.
+	if(ntLibPut >= ntSortPut){//Если путь библиотеки будет больше или равен пути сортировки
+		for(int ntShag = 0; ntShag<ntSortPut; ++ntShag){//сравниваем путь библиотеки и сортировки по сортиров.
+			if(strSortPut[ntShag] != strLibPut[ntShag]){//Если символы не одинаковые, то...
+				blSortPut = false;//Нет совпадения. Пути не взаимовложенные.
+				break;//Выходим из перечисления.
+			}
+		}
+	}
+	else//в противном случае...
+		blSortPut = false;//Пути не взаимовложенные.
+
+	if(blSortPut){//Если не было изменения флага, то пути взаимовложенные.
+		m_pdcmessage->warning(ui->plblLibPut, ui->plblSortPut, tr("Путь: ") + strLibPut +
+				tr(" вложен в путь: ") + strSortPut + tr(". Это ограничение программы, перенесите ") +
+				ui->plblLibPut->text() + tr(" в другое место и повторите попытку!"));
+	}
+
+	QDir odrProg = QDir::current();//Создаём объект который будет содержать путь программы.
+	QString strProgram = odrProg.path() + "/copy.txt";//Путь с именем файла Копирования.
+	m_pflCopy->setFileName(strProgram);//Создаём имя на указатель на файл Копирования.
+	if(m_pflCopy->exists()){//Если файл в папке есть, то...
+		if(!m_pflCopy->remove()){//Удаляем файл. Если он не удалился, то...
+			m_pdcmessage->critical(tr("Ошибка:"), tr("При удалении файла: ") + strProgram 
+					+ tr(" произошла ошибка. Выберете другую директорию."));
+			return;//Выходим из слота.
+		}
+	}
+
+	ui->pgbxSort->setEnabled(false);//Деактивируем меню.
+	ui->ptdtSort->clear();//Очищаем окно отображения.
+	m_ptmRabota->setHMS(0,0,0);//Иннициализируем время создания Оглавления.
+	ui->plblSortRabotaTimer->setText(m_ptmRabota->toString("hh:mm:ss"));//Отображаем время по нулям.
+	m_pdcvremya->startTimer();//Запускаем таймер с частотой обновления секунду.
+	if(m_pflCopy->open(QIODevice::WriteOnly)){//Если файл открылся для записи, то...
+		m_ntKolichestvo = 0;//Обнуляем.
+		m_blRekursiya = true;//Запускаем рекурсию.
+		m_ntSchet = 0;//Обнуляем количество копируемых файлов.
+		m_strSortPut = strSortPut;//Делаем путь сортировки глобальным.
+		startSchet(QDir(strLibPut));//Подсчёт копируемых файлов.
+		ui->ppbrSort->setRange(0, m_ntSchet);//Задаю количество шагов от 0 до 100%.
+		startSort(QDir(strLibPut));//Запускаем сортировку файлов.
+		ui->ppbrSort->setValue(m_ntSchet);//Отобразить на панели прогресса 100%.
+	}
+	m_pdcvremya->stopTimer();//Останавливаем таймер обновления времени.
+	m_pflCopy->close();//Закрываем файл на чтение.
+	ui->pgbxSort->setEnabled(true);//Активируем меню.
+	m_pdcmessage->information(sozdat, tr("Сортировка файлов завершена! Количество отсортированных файлов: ")
+			+ QString::number(m_ntKolichestvo) + ".");//
+}
+
+void DCSort::slotSortProvodnik(){//Слот открытия папки отсортированных файлов.
+/////////////////////////////////////////////////////////
+//---С Л О Т   О Т К Р Ы Т И Я   П Р О В О Д Н И К А---//
+/////////////////////////////////////////////////////////
+	QString strSortPut = ui->pldtSortPut->text();//Путь к месту сортировки.
+	QDir drSortPut(strSortPut);//Папка места сортировки файлов
+	if(!drSortPut.exists()){//Если данная папка не существует, то...
+		m_pdcmessage->critical(ui->plblSortPut, tr("Данной папки не существует: ") + ui->plblSortPut->text()
+				+ tr(" , укажите существующую папку!"));
+	}
+	else{
+		if(strSortPut.isEmpty()){//Если путь места сортировки пуст, то...
+			m_pdcmessage->critical(ui->plblSortPut, tr("Пустое поле: ") + ui->plblSortPut->text()
+					+ tr(", заполните его!"));
+		}
+		else{//В противном случае...
+			QFileDialog::getOpenFileName(this,tr("Отсортированные файлы:"),ui->pldtSortPut->text(),
+					tr("Типы файлов: (")+polMasku()+")");//Открываем проводник, в котором файлы
+		}
+	}
+}
+
+void DCSort::slotSortOtmena(){//Слот отмены процесса сортировки.
+/////////////////////////////////////////////////////
+//---С Л О Т   О Т М Е Н Ы   С О Р Т И Р О В К И---//
+/////////////////////////////////////////////////////
+	m_blRekursiya = false;
+}
+
+void DCSort::slotSortVihod(){//Слот выхода из программы.
+///////////////////////////////////////////
+//---С Л О Т   К Н О П К И   В Ы Х О Д---//
+///////////////////////////////////////////
+	this->close();//Закрыть программу.
+}
+
+void DCSort::slotSortRabota(){//Слот отображающий время работы Сортировки.
+/////////////////////////////////////////////
+//---С Л О Т   Т А Й М Е Р   Р А Б О Т Ы---//
+/////////////////////////////////////////////
+	*m_ptmRabota = m_ptmRabota->addSecs(1);//прибавляем одну секунду.
+	ui->plblSortRabotaTimer->setText(m_ptmRabota->toString("hh:mm:ss"));//Отображаем время.
+}
