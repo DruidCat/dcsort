@@ -38,24 +38,33 @@ private:
 	DCVremya* m_pdcvremya = 0;//Указатель на поток времени.
 	QFile* m_pflCopy = 0;//Указатель на файл со скопированными файлами..
 	QTextStream* m_ptstCopy = 0;
-	QTime* m_ptmRabota = 0;//Таймер, который будет отсчитывать время работы создания Оглавления.
-	QSettings m_onastroiki;//Настройки программы которые будут хранится в системном реестре.
-	void ustNastroiki();//Запись настроек программы
-	void polNastroiki();//Чтение настроек программы
-	QString polNastroikuMaski();//Возвращает настройку маски.
-	void ustNastroikuMaski(QString strNastroikaMaski);//Устанавливает настроики маски.
+	QTime* m_ptmStart = 0;//Время начала сортировки.
+	//---реестр---//
+	QSettings m_oreestr;//Настройки программы которые будут хранится в системном реестре.
+	void ustReestr();//Запись настроек программы
+	void polReestr();//Чтение настроек программы
+	QString polReestrMaski();//Возвращает настройку маски.
+	void ustReestrMaski(QString strNastroikaMaski);//Устанавливает настроики маски.
+	QString polReestrFailImya();//Возвращаем настройки имени файла.
+	void ustReestrFailImya(QString strReestrFailImya);//Устанавливаем настройки имени файла.
+	//---рекурсия---//
 	void startSchet(const QDir& dir);//Рекурсивный метод подсчёта копируемых файлов.
 	void startSort(const QDir& dir);//Рекурсивный метод  поиска файлов
+
 	void cvetSort();//Цвет граф по умолчанию.
 	QString polMasku();//Возвращает маску файлов, которые нужно отсортировать.
+	bool udalitFaili();//Удалить файлы, которые были скопированны на сортировку.
 
 	QString m_strSortPut;//Место сортировки файлов.
 	bool m_blRekursiya;//Флаг выхода функции из рекурсии.
 	int m_ntSchet;//Счётчик количества копируемых файлов.
-	int m_ntTab;//Счетчик табов.
 	int m_ntKolichestvo;//Количество отсортированных файлов файлов.
-	int m_ntSec;//Колличество секунд в сортируемом файле.
+	//---имя-сортируемого-файла---//
+	QString m_strFailImya;//Имя сортируемого файла.
 	int m_ntCopy;//Число одинаковых имён копируемых файлов.
+	bool m_blFailImya;//Поставлена галочка на Имени сортируемого файла или нет.
+	int m_ntFailImya;//Тип отображения имени файла.
+	QString m_strFailImyaFormat;//Формат отображения сортируемого файла.
 	//---расширения типов файлов---//
 	QString m_strIzob;//Перечень расширений изображений.
 	QString m_strVideo;//Перечень расширений видео.

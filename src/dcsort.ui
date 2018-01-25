@@ -331,14 +331,16 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="plblSortKolichestvoFailov">
+           <widget class="QLCDNumber" name="plcdSortKolichestvo">
             <property name="font">
              <font>
               <pointsize>12</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
              </font>
             </property>
-            <property name="text">
-             <string>0</string>
+            <property name="digitCount">
+             <number>11</number>
             </property>
            </widget>
           </item>
@@ -412,7 +414,7 @@
      <x>0</x>
      <y>0</y>
      <width>932</width>
-     <height>18</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
