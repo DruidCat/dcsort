@@ -1,0 +1,2 @@
+nnoremap <a-F7> :wa<cr>:!./sort .<cr>
+inoremap <a-F7> <ESC>:wa<cr>:!./sort .<cr>a
