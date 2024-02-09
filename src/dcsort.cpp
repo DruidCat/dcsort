@@ -63,7 +63,7 @@ DCSort::DCSort(QWidget* proditel):QMainWindow(proditel), ui(new Ui::DCSort), m_o
 	m_strFailImya = "";//Инициализируем пустой строкой.
 	m_ntCopy = 0;//Обнуляем.
 	//---расширения типов файлов---//
-	m_strIzob = " *.png *.jpg *.jpeg *.jpe *.gif *.psd *.tif *.tiff *.bmp ";
+	m_strIzob = " *.png *.jpg *.jpeg *.jpe *.gif *.psd *.tif *.tiff *.bmp *.heic";
 	m_strVideo = " *.avi *.mp4 *.m4v *.mov *.mkv *.mpg *.mpeg";
 	m_strMuzika = " *.mp3 *.m4a *.wav *.ogg *.flac *.aac";
 	m_strDoc = " *.pdf *.doc *.docx *.xls *.xlsx *.txt *.zip *.rar *.7z *.rtf *.odt *.fb2 *.djvu";

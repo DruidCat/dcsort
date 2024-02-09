@@ -57,7 +57,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Путь к файлам:</string>
+                  <string>Что будем сортировать:</string>
                  </property>
                 </widget>
                </item>
@@ -94,7 +94,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Путь к сортировке:</string>
+                  <string>Куда будем сортировать:</string>
                  </property>
                 </widget>
                </item>
@@ -335,7 +335,6 @@
             <property name="font">
              <font>
               <pointsize>12</pointsize>
-              <weight>75</weight>
               <bold>true</bold>
              </font>
             </property>
