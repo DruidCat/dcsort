@@ -1,0 +1,99 @@
+# Игнорируем файлы созданные от CMakeLists.txt
+# --------------------------------------------
+/build/sort
+/build/sort_autogen/
+/build/CMakeFiles
+/build/CMakeCache.txt
+/build/cmake_install.cmake
+/build/.qt/
+/build/.qt_plugins/
+/build/Android_Qt_6_8_2_Clang_arm64_v8a-Debug/
+/build/Android_Qt_6_8_2_Clang_arm64_v8a-Release/
+/build/Android_Qt_6_8_2_PATH_android_arm64_v8a_Clang_arm64_v8a-Debug/
+/build/Android_Qt_6_8_2_PATH_android_arm64_v8a_Clang_arm64_v8a-Profile/
+/build/Android_Qt_6_8_2_PATH_android_arm64_v8a_Clang_arm64_v8a-Release/
+/build/Android_Qt_6_8_2_PATH_android_armv7_Clang_armeabi_v7a-Debug/
+/build/Android_Qt_6_8_2_PATH_android_armv7_Clang_armeabi_v7a-Release/
+/build/Desktop_Qt_6_8_2_MinGW_64_bit-Debug/
+/build/Android_Qt_6_8_2_Clang_armeabi_v7a-Debug/
+/build/Android_Qt_6_8_2_Clang_armeabi_v7a-Release/
+/build/Desktop_Qt_6_8_2_llvm_mingw_64_bit-Debug/
+/build/Android_Qt_6_8_2_PATH_android_x86_64_Clang_x86_64-Debug/
+/build/Desktop_Qt_6_8_2_MinGW_64_bit-Release/
+/build/Android_Qt_6_8_2_Clang_armeabi_v7a_9d7ebc-Debug/
+/build/wget-log
+/deploy
+
+# This file is used to ignore files which are generated
+# ----------------------------------------------------------------------------
+
+*~
+*.autosave
+*.a
+*.core
+*.moc
+*.o
+*.obj
+*.orig
+*.rej
+*.so
+*.so.*
+*_pch.h.cpp
+*_resource.rc
+*.qm
+.#*
+*.*#
+core
+!core/
+tags
+.DS_Store
+.directory
+*.debug
+Makefile*
+*.prl
+*.app
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+Thumbs.db
+*.res
+/.qmake.cache
+/.qmake.stash
+
+# qtcreator generated files
+*.pro.user*
+*.txt.user*
+
+# xemacs temporary files
+*.flc
+
+# Vim temporary files
+.*.swp
+
+# Visual Studio generated files
+*.ib_pdb_index
+*.idb
+*.ilk
+*.pdb
+*.sln
+*.suo
+*.vcproj
+*vcproj.*.*.user
+*.ncb
+*.sdf
+*.opensdf
+*.vcxproj
+*vcxproj.*
+
+# MinGW generated files
+*.Debug
+*.Release
+
+# Python byte code
+*.pyc
+
+# Binaries
+# --------
+*.dll
+*.exe
+

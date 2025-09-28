@@ -321,8 +321,10 @@ void DCSort::startSort(const QDir& dir){//Рекурсивный метод по
 			}
 
 			if(!blImyaSortFailaData){//Если имя сортированного файла не дата, то...
-				strGod = fnfSort.created().date().toString("yyyy");//Год создания файла.
-				strSortData = fnfSort.created().date().toString("yyyy-MM-dd");//папки с датами.
+				//strGod = fnfSort.created().date().toString("yyyy");//Год создания файла.
+				strGod = fnfSort.birthTime().date().toString("yyyy");//Год создания файла.
+				//strSortData = fnfSort.created().date().toString("yyyy-MM-dd");//папки с датами.
+				strSortData = fnfSort.birthTime().date().toString("yyyy-MM-dd");//папки с датами.
 			}
 			QDir drSort(m_strSortPut);//Каталог сортировки файлов.
 			QDir drSortGod(m_strSortPut+QDir::separator()+strGod);//Каталог Года сортировки
@@ -392,7 +394,8 @@ void DCSort::startSort(const QDir& dir){//Рекурсивный метод по
 								}
 							}
 							else{//в противном случае...
-								strFailImya = fnfSort.created().date().toString(m_strFailImyaFormat)
+								//strFailImya = fnfSort.created().date().toString(m_strFailImyaFormat)
+								strFailImya = fnfSort.birthTime().date().toString(m_strFailImyaFormat)
 										+fnfSort.completeBaseName();//Формат + имя файла без изменений.
 							}
 						}
@@ -403,11 +406,14 @@ void DCSort::startSort(const QDir& dir){//Рекурсивный метод по
 									if(blImyaSortFailaVremya)//Если в имени файла есть время создания, то...
 										strFailImya=strFailImya+tmImyaSortFaila.toString("hh-mm-ss");
 									else//В противном случае...
-										strFailImya=strFailImya+fnfSort.created().time().toString("hh-mm-ss");
+										//strFailImya=strFailImya+fnfSort.created().time().toString("hh-mm-ss");
+										strFailImya=strFailImya+fnfSort.birthTime().time().toString("hh-mm-ss");
 								}
 								else{//в противном случае...
-									strFailImya = fnfSort.created().date().toString(m_strFailImyaFormat)
-											+fnfSort.created().time().toString("hh-mm-ss");//Формат+время созд
+									//strFailImya = fnfSort.created().date().toString(m_strFailImyaFormat)
+											//+fnfSort.created().time().toString("hh-mm-ss");//Формат+время созд
+									strFailImya = fnfSort.birthTime().date().toString(m_strFailImyaFormat)
+											+fnfSort.birthTime().time().toString("hh-mm-ss");//Формат+время созд
 								}
 							}
 							else{//В противном случае...
@@ -420,17 +426,28 @@ void DCSort::startSort(const QDir& dir){//Рекурсивный метод по
 												+tmImyaSortFaila.second();//Считаем кол-во сек от создания
 									}
 									else{//В противном случае...
+                                        /*
 										ntSec =	fnfSort.created().time().hour()*3600
 												+fnfSort.created().time().minute()*60
 												+fnfSort.created().time().second();//Считаем кол-во сек от соз
+                                        */
+										ntSec =	fnfSort.birthTime().time().hour()*3600
+												+fnfSort.birthTime().time().minute()*60
+												+fnfSort.birthTime().time().second();//Считаем кол-во сек от соз
 									}
 									strFailImya = strFailImya + QString::number(ntSec);//Формат+сумма сек
 								}
 								else{//в противном случае...
+                                    /*
 									ntSec =	fnfSort.created().time().hour()*3600
 											+fnfSort.created().time().minute()*60
 											+fnfSort.created().time().second();//Считаем кол-во сек от соз
-									strFailImya = fnfSort.created().date().toString(m_strFailImyaFormat)
+                                    */
+									ntSec =	fnfSort.birthTime().time().hour()*3600
+											+fnfSort.birthTime().time().minute()*60
+											+fnfSort.birthTime().time().second();//Считаем кол-во сек от соз
+									//strFailImya = fnfSort.created().date().toString(m_strFailImyaFormat)
+									strFailImya = fnfSort.birthTime().date().toString(m_strFailImyaFormat)
 											+QString::number(ntSec);//Формат + сумма секунд от создания файла.
 								}
 							}
